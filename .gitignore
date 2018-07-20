@@ -1,2 +1,4 @@
+# As part of dev environment #
+###################
 .vscode/
-_pycache_/
+__pycache__/
