@@ -103,7 +103,7 @@ class Board:
         else:
             print("Incorrect piece code")
     
-    def generatePieceList(self):
+    def generatePieceList(self):        #Generates multi-level dictionary containing objects of all pieces on the board
         pieceList = {
             'white': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}},
             'black': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}}
@@ -114,7 +114,7 @@ class Board:
                 pieceList[tile.piece.team][tile.piece.name][tile.piece.mailbox] = tile.piece
         self.pieceList = pieceList
 
-    def generateMoves(self):
+    def generateAllMoves(self):                              #Generates moves for all pieces on the board (stored in each piece's legalmoves array)
         legalMovesList = self.pieceList                   #Does not account for pins, en passant, or castling
         for pieceName in legalMovesList['white'].items():
             for mailbox in pieceName[1]:
@@ -122,6 +122,7 @@ class Board:
         for pieceName in legalMovesList['black'].items():
             for mailbox in pieceName[1]:
                 pieceName[1][mailbox].generateMoves(self.board)
+
 
     @staticmethod
     def formatFEN(FEN):

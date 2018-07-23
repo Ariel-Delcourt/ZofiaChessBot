@@ -5,11 +5,19 @@ class Piece:
         self.team = team                    # White/Black
         self.xray = []                      # Array of pieces attacked indirectly through another (x-ray vision)
 
+    def xraySearch(self,offset,target,board):
+        currentXray = []
+        while (board[target].mailbox > 0):    # Depth search - sees behind the piece until out of bounds
+            if board[target].piece is not None:
+                currentXray.append(board[target].piece)
+            target += offset
+        if currentXray != []:
+            self.xray.append(currentXray)
+
 class Pawn(Piece):
 
     name = 'P'
     value = 1
-    pinned = False
 
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
@@ -54,7 +62,6 @@ class Knight(Piece):
 
     name = 'N'
     value = 3
-    pinned = False
 
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
@@ -74,7 +81,6 @@ class King(Piece):
 
     name = 'K'
     value = float("inf")
-    pinned = False
 
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
@@ -94,44 +100,50 @@ class Bishop(Piece):
 
     name = 'B'
     value = 3
-    pinned = False
+    offsets = [9,11,-9,-11]
 
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
 
     def generateMoves(self, board):
         legalMoves = []
-        offsets = [9,11,-9,-11]
-        for offset in offsets:
-            newOffset = offset
-            while ((board[self.mailbox + newOffset].mailbox > 0) and (board[self.mailbox + newOffset].piece is None)):
-                legalMoves.append(('move', self.mailbox + newOffset))
-                newOffset += offset
-            if (board[self.mailbox + newOffset].piece is not None):
-                if (board[self.mailbox + newOffset].piece.team != self.team):
-                    legalMoves.append(('capture', self.mailbox + newOffset))
+        self.xray = []                  #Clears previously x-rayed pieces
+        for offset in self.offsets:        #For each possible move direction
+            target = self.mailbox + offset
+            # This loop moves tile by tile, assessing the presence of a piece or out of bounds
+            # If a piece is found, it attempts to see the pieces behind it, accounting for pins and xray attacks
+            while ((board[target].mailbox > 0) and (board[target].piece is None)):
+                legalMoves.append(('move', target))   # Format for move storage: ('move'/'capture', mailbox of where move would put this piece)
+                target += offset
+            if (board[target].piece is not None):
+                if (board[target].piece.team != self.team):
+                    legalMoves.append(('capture', target))
+                self.xraySearch(offset,target,board)
         self.legalMoves = legalMoves
 
 class Rook(Piece):
 
     name = 'R'
     value = 5
-    pinned = False
+    offsets = [1,-1,10,-10]
 
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
 
     def generateMoves(self, board):
         legalMoves = []
-        offsets = [1,-1,10,-10]
-        for offset in offsets:
-            newOffset = offset
-            while ((board[self.mailbox + newOffset].mailbox > 0) and (board[self.mailbox + newOffset].piece is None)):
-                legalMoves.append(('move', self.mailbox + newOffset))
-                newOffset += offset
-            if (board[self.mailbox + newOffset].piece is not None):
-                if (board[self.mailbox + newOffset].piece.team != self.team):
-                    legalMoves.append(('capture', self.mailbox + newOffset))
+        self.xray = []                  #Clears previously x-rayed pieces
+        for offset in self.offsets:        #For each possible move direction
+            target = self.mailbox + offset
+            # This loop moves tile by tile, assessing the presence of a piece or out of bounds
+            # If a piece is found, it attempts to see the pieces behind it, accounting for pins and xray attacks
+            while ((board[target].mailbox > 0) and (board[target].piece is None)):
+                legalMoves.append(('move', target))   # Format for move storage: ('move'/'capture', mailbox of where move would put this piece)
+                target += offset
+            if (board[target].piece is not None):
+                if (board[target].piece.team != self.team):
+                    legalMoves.append(('capture', target))
+                self.xraySearch(offset,target,board)
         self.legalMoves = legalMoves
             
 
@@ -139,20 +151,23 @@ class Queen(Piece):
 
     name = 'Q'
     value = 9
-    pinned = False
+    offsets = [1,11,10,9,-1,-11,-10,-9]
 
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
     
     def generateMoves(self, board):
         legalMoves = []
-        offsets = [1,11,10,9,-1,-11,-10,-9]
-        for offset in offsets:
-            newOffset = offset
-            while ((board[self.mailbox + newOffset].mailbox > 0) and (board[self.mailbox + newOffset].piece is None)):
-                legalMoves.append(('move', self.mailbox + newOffset))
-                newOffset += offset
-            if (board[self.mailbox + newOffset].piece is not None):
-                if (board[self.mailbox + newOffset].piece.team != self.team):
-                    legalMoves.append(('capture', self.mailbox + newOffset))
+        self.xray = []                  #Clears previously x-rayed pieces
+        for offset in self.offsets:        #For each possible move direction
+            target = self.mailbox + offset
+            # This loop moves tile by tile, assessing the presence of a piece or out of bounds
+            # If a piece is found, it attempts to see the pieces behind it, accounting for pins and xray attacks
+            while ((board[target].mailbox > 0) and (board[target].piece is None)):
+                legalMoves.append(('move', target))   # Format for move storage: ('move'/'capture', mailbox of where move would put this piece)
+                target += offset
+            if (board[target].piece is not None):
+                if (board[target].piece.team != self.team):
+                    legalMoves.append(('capture', target))
+                self.xraySearch(offset,target,board)
         self.legalMoves = legalMoves
