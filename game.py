@@ -30,5 +30,7 @@ chessBoard.board[Tile.coordinateToMailbox('e5')].piece.generateMoves(chessBoard.
 print("legal moves for E5 black Bishop: " , chessBoard.board[Tile.coordinateToMailbox('e5')].piece.legalMoves, end='\n\n')
 chessBoard.generatePieceList()
 chessBoard.generateMoves()
+chessBoard.boardFromFEN("rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2")
+chessBoard.display()
 
 input() 

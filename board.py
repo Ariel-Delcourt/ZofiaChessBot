@@ -28,6 +28,10 @@ class Board:
             finalBoard.append(Tile('x', i, None))
         self.board = finalBoard
 
+    def clearBoard(self):
+        for tile in self.board:
+            tile.piece = None
+
     def populate(self):
         for i in range(31,39):
             self.board[i].piece = Pawn('white', self.board[i].mailbox)
@@ -73,28 +77,29 @@ class Board:
                     print(Fore.LIGHTYELLOW_EX + tile.piece.name, end=" ", flush=True)
             print()
 
-    def addPiece(self, piece, team, coordinate):
+    def addPiece(self, piece, team, mailbox):
         piece = str.capitalize(piece)
         team = str.lower(team)
-        mailbox = Tile.coordinateToMailbox(coordinate)
+        if type(mailbox) is str:
+            mailbox = Tile.coordinateToMailbox(mailbox)
         if (piece == 'P'):
             self.board[mailbox].piece = Pawn(team, mailbox)
-            print("Successfully added", team,"Pawn to", coordinate)
+            print("Successfully added", team,"Pawn to", mailbox)
         elif (piece == 'R'):
             self.board[mailbox].piece = Rook(team, mailbox)
-            print("Successfully added", team,"Rook to", coordinate)
+            print("Successfully added", team,"Rook to", mailbox)
         elif (piece == 'N'):
             self.board[mailbox].piece = Knight(team, mailbox)
-            print("Successfully added", team,"Knight to", coordinate)
+            print("Successfully added", team,"Knight to", mailbox)
         elif (piece == 'B'):
             self.board[mailbox].piece = Bishop(team, mailbox)
-            print("Successfully added", team,"Bishop to", coordinate)
+            print("Successfully added", team,"Bishop to", mailbox)
         elif (piece == 'Q'):
             self.board[mailbox].piece = Queen(team, mailbox)
-            print("Successfully added", team,"Queen to", coordinate)
+            print("Successfully added", team,"Queen to", mailbox)
         elif (piece == 'K'):
             self.board[mailbox].piece = King(team, mailbox)
-            print("Successfully added", team,"King to", coordinate)
+            print("Successfully added", team,"King to", mailbox)
         else:
             print("Incorrect piece code")
     
@@ -117,3 +122,36 @@ class Board:
         for pieceName in legalMovesList['black'].items():
             for mailbox in pieceName[1]:
                 pieceName[1][mailbox].generateMoves(self.board)
+
+    @staticmethod
+    def formatFEN(FEN):
+        FEN = FEN.split("/")            #Splits FEN using slashes at first
+        FENTip = FEN[7].split(' ')      #Additionally splits the ending by spaces
+        FEN = FEN[:7] + FENTip          #Concatenates the slash split and space split arrays
+        return FEN
+
+    def boardFromFEN(self, FEN):
+        self.clearBoard()
+        FEN = self.formatFEN(FEN)
+        print(FEN)
+        index = 0
+        for section in FEN:
+            if index > 7:               #Currently does not handle other information for board state
+                return
+            else:
+                target = 91 - (index * 10)      #FEN moves from top to bottom
+                for piece in section:
+                    try:
+                        piece = int(piece)      #If value is empty space(s), move the target by that much
+                        target += piece
+                        continue
+                    except Exception:
+                        pass
+
+                    if piece.islower():
+                        self.addPiece(piece, 'black', target)
+                        target += 1
+                    else:
+                        self.addPiece(piece, 'white', target)
+                        target += 1
+                index += 1
