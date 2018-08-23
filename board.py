@@ -156,3 +156,31 @@ class Board:
                         self.addPiece(piece, 'white', target)
                         target += 1
                 index += 1
+    
+    def cullPins(self):
+        pieceNames = ['B','Q','R']
+        teamNames = ['white','black']
+        for team in teamNames:
+            for pieceName in pieceNames:
+                for mailbox, piece in self.pieceList[team][pieceName].items():
+                    for offset, xray in piece.xray.items():
+                        if len(xray) < 2:
+                            continue
+                        pinTarget = xray[1]
+                        pinnedPiece = xray[0]
+                        inverseOffset = offset * (-1)
+                        if (pinTarget.name == 'K') and (pinTarget.team != piece.team) and (pinnedPiece.team != piece.team):      #If king is enemy and being pinned with enemy piece
+                            if inverseOffset in pinnedPiece.offsets:
+                                newLegalMoves = []
+                                target = pinnedPiece.mailbox + inverseOffset
+                                # This loop moves tile by tile, assessing the presence of a piece or out of bounds
+                                # If a piece is found, it attempts to see the pieces behind it, accounting for pins and xray attacks
+                                while ((self.board[target].mailbox > 0) and (self.board[target].piece is None)):
+                                    newLegalMoves.append(('move', target))   # Format for move storage: ('move'/'capture', mailbox of where move would put this piece)
+                                    target += inverseOffset
+                                if (self.board[target].piece is not None):
+                                    if (self.board[target].piece.team != pinnedPiece.team):
+                                        newLegalMoves.append(('capture', target))
+                                pinnedPiece.legalMoves = newLegalMoves
+                            else:
+                                pinnedPiece.legalMoves = []

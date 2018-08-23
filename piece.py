@@ -3,7 +3,8 @@ class Piece:
     def __init__(self, team, mailbox):
         self.mailbox = mailbox              # Its location on the board
         self.team = team                    # White/Black
-        self.xray = []                      # Array of pieces attacked indirectly through another (x-ray vision)
+        self.offsets = []
+        self.xray = {}                     # Array of pieces attacked indirectly through another (x-ray vision)
 
     def xraySearch(self,offset,target,board):
         currentXray = []
@@ -12,7 +13,7 @@ class Piece:
                 currentXray.append(board[target].piece)
             target += offset
         if currentXray != []:
-            self.xray.append(currentXray)
+            self.xray[offset] = currentXray
 
 class Pawn(Piece):
 
@@ -107,7 +108,7 @@ class Bishop(Piece):
 
     def generateMoves(self, board):
         legalMoves = []
-        self.xray = []                  #Clears previously x-rayed pieces
+        self.xray = {}                  #Clears previously x-rayed pieces
         for offset in self.offsets:        #For each possible move direction
             target = self.mailbox + offset
             # This loop moves tile by tile, assessing the presence of a piece or out of bounds
@@ -132,7 +133,7 @@ class Rook(Piece):
 
     def generateMoves(self, board):
         legalMoves = []
-        self.xray = []                  #Clears previously x-rayed pieces
+        self.xray = {}                  #Clears previously x-rayed pieces
         for offset in self.offsets:        #For each possible move direction
             target = self.mailbox + offset
             # This loop moves tile by tile, assessing the presence of a piece or out of bounds
@@ -158,7 +159,7 @@ class Queen(Piece):
     
     def generateMoves(self, board):
         legalMoves = []
-        self.xray = []                  #Clears previously x-rayed pieces
+        self.xray = {}                  #Clears previously x-rayed pieces
         for offset in self.offsets:        #For each possible move direction
             target = self.mailbox + offset
             # This loop moves tile by tile, assessing the presence of a piece or out of bounds
