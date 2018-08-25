@@ -84,7 +84,6 @@ class King(Piece):
         self.value = float("inf")
 
     def cullUnsafeMoves(self,board):
-        index = 0
         newLegalMoves = []
         if self.team == 'white':
             for move, target in self.legalMoves:
