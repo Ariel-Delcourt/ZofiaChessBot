@@ -122,7 +122,25 @@ class Board:
         for pieceName in legalMovesList['black'].items():
             for mailbox in pieceName[1]:
                 pieceName[1][mailbox].generateMoves(self.board)
-
+    
+    def markBoardTiles(self):
+        legalMovesList = self.pieceList
+        for pieceName in legalMovesList['white'].items():
+            for mailbox in pieceName[1]:
+                for move, target in pieceName[1][mailbox].legalMoves:
+                    self.board[target].watchedBy['white'].append(pieceName[1][mailbox])
+        for pieceName in legalMovesList['black'].items():
+            for mailbox in pieceName[1]:
+                for move, target in pieceName[1][mailbox].legalMoves:
+                    self.board[target].watchedBy['black'].append(pieceName[1][mailbox])
+    
+    def clearUnsafeKingSquares(self):
+        next(iter((self.pieceList['white']['K'].items())))[1].cullUnsafeMoves(self.board)
+        next(iter((self.pieceList['black']['K'].items())))[1].cullUnsafeMoves(self.board)
+                                                                                #A bit of a ridiculous way to access the king in this particular structure: due to the fact that
+                                                                                #dict.items() operates using views instead of lists, this is the fastest usage of iter and is thread-safe
+                                                                                #See: https://blog.labix.org/2008/06/27/watch-out-for-listdictkeys-in-python-3 and
+                                                                                #https://stackoverflow.com/questions/18552001/accessing-dict-keys-element-by-index-in-python3/27638751#27638751
 
     @staticmethod
     def formatFEN(FEN):
@@ -170,7 +188,7 @@ class Board:
                         pinnedPiece = xray[0]
                         inverseOffset = offset * (-1)
                         if (pinTarget.name == 'K') and (pinTarget.team != piece.team) and (pinnedPiece.team != piece.team):      #If king is enemy and being pinned with enemy piece
-                            if inverseOffset in pinnedPiece.offsets:
+                            if (pinnedPiece.name != 'P') and (inverseOffset in pinnedPiece.offsets):                     #If piece is Bishop, Queen, or Rook (Not accounted for pawns yet)
                                 newLegalMoves = []
                                 target = pinnedPiece.mailbox + inverseOffset
                                 # This loop moves tile by tile, assessing the presence of a piece or out of bounds

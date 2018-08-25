@@ -17,11 +17,10 @@ class Piece:
 
 class Pawn(Piece):
 
-    name = 'P'
-    value = 1
-
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
+        self.name = 'P'
+        self.value = 1
 
     def generateMoves(self, board):
         legalMoves = []                                         #legal moves are stored in an array of tuples given by (coordinate of piece, action, coordinate of move),
@@ -61,11 +60,10 @@ class Pawn(Piece):
     
 class Knight(Piece):
 
-    name = 'N'
-    value = 3
-
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
+        self.name = 'N'
+        self.value = 3
 
     def generateMoves(self, board):
         legalMoves = []
@@ -80,11 +78,23 @@ class Knight(Piece):
         
 class King(Piece):
 
-    name = 'K'
-    value = float("inf")
-
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
+        self.name = 'K'
+        self.value = float("inf")
+
+    def cullUnsafeMoves(self,board):
+        index = 0
+        newLegalMoves = []
+        if self.team == 'white':
+            for move, target in self.legalMoves:
+                if len(board[target].watchedBy['black']) == 0:
+                    newLegalMoves.append((move,target))
+        else:
+            for move, target in self.legalMoves:
+                if len(board[target].watchedBy['white']) == 0:
+                    newLegalMoves.append((move,target))
+        self.legalMoves = newLegalMoves
 
     def generateMoves(self, board):
         legalMoves = []
@@ -99,12 +109,11 @@ class King(Piece):
 
 class Bishop(Piece):
 
-    name = 'B'
-    value = 3
-    offsets = [9,11,-9,-11]
-
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
+        self.name = 'B'
+        self.value = 3
+        self.offsets = [9,11,-9,-11]
 
     def generateMoves(self, board):
         legalMoves = []
@@ -124,12 +133,11 @@ class Bishop(Piece):
 
 class Rook(Piece):
 
-    name = 'R'
-    value = 5
-    offsets = [1,-1,10,-10]
-
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
+        self.name = 'R'
+        self.value = 5
+        self.offsets = [1,-1,10,-10]
 
     def generateMoves(self, board):
         legalMoves = []
@@ -150,12 +158,11 @@ class Rook(Piece):
 
 class Queen(Piece):
 
-    name = 'Q'
-    value = 9
-    offsets = [1,11,10,9,-1,-11,-10,-9]
-
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
+        self.name = 'Q'
+        self.value = 9
+        self.offsets = [1,11,10,9,-1,-11,-10,-9]
     
     def generateMoves(self, board):
         legalMoves = []
