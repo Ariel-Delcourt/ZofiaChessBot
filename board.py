@@ -35,6 +35,7 @@ class Board:
     def clearBoard(self):
         for tile in self.board:
             tile.piece = None
+        print("Board cleared successfully.")
 
     def populate(self):
         for i in range(31,39):
@@ -112,6 +113,12 @@ class Board:
             print("Successfully added", team,"King to", mailbox)
         else:
             print("Incorrect piece code")
+
+    def clearTile(self, coordinate):
+        if type(coordinate) is str:
+            mailbox = Tile.coordinateToMailbox(coordinate)
+        self.board[mailbox].piece = None
+        print("Tile", coordinate, "cleared successfully.")
     
     def generatePieceList(self):        # Generates multi-level dictionary containing objects of all pieces on the board
         pieceList = {
@@ -245,4 +252,4 @@ class Board:
         self.markBoardTiles()
         self.clearUnsafeKingSquares()
         self.cullPins()
-        print("Board initialized")
+        print("Board initialized successfully.")
