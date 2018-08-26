@@ -11,6 +11,7 @@ class Board:
         self.currentTurn = 0
         self.playerTurnToPlay = 'white'
         self.enPassantSquare = None
+        self.initialized = False
         
     def makeBoard(self):
         finalBoard = []
@@ -95,22 +96,22 @@ class Board:
             mailbox = Tile.coordinateToMailbox(mailbox)
         if (piece == 'P'):
             self.board[mailbox].piece = Pawn(team, mailbox)
-            print("Successfully added", team,"Pawn to", mailbox)
+            print("Successfully added", team,"Pawn to", Tile.mailboxToCoordinate(mailbox))
         elif (piece == 'R'):
             self.board[mailbox].piece = Rook(team, mailbox)
-            print("Successfully added", team,"Rook to", mailbox)
+            print("Successfully added", team,"Rook to", Tile.mailboxToCoordinate(mailbox))
         elif (piece == 'N'):
             self.board[mailbox].piece = Knight(team, mailbox)
-            print("Successfully added", team,"Knight to", mailbox)
+            print("Successfully added", team,"Knight to", Tile.mailboxToCoordinate(mailbox))
         elif (piece == 'B'):
             self.board[mailbox].piece = Bishop(team, mailbox)
-            print("Successfully added", team,"Bishop to", mailbox)
+            print("Successfully added", team,"Bishop to", Tile.mailboxToCoordinate(mailbox))
         elif (piece == 'Q'):
             self.board[mailbox].piece = Queen(team, mailbox)
-            print("Successfully added", team,"Queen to", mailbox)
+            print("Successfully added", team,"Queen to", Tile.mailboxToCoordinate(mailbox))
         elif (piece == 'K'):
             self.board[mailbox].piece = King(team, mailbox)
-            print("Successfully added", team,"King to", mailbox)
+            print("Successfully added", team,"King to", Tile.mailboxToCoordinate(mailbox))
         else:
             print("Incorrect piece code")
 
@@ -130,6 +131,17 @@ class Board:
             if (tile.piece is not None):
                 pieceList[tile.piece.team][tile.piece.name][tile.piece.mailbox] = tile.piece
         self.pieceList = pieceList
+
+    def sanityCheck(self):
+        sanity = True
+        if len(self.pieceList['white']['K']) < 1:
+            print("Missing white king, cannot proceed.")
+            sanity = False
+        if len(self.pieceList['black']['K']) < 1:
+            print("Missing black king, cannot proceed.")
+            sanity = False
+        return sanity
+        
 
     def generateAllMoves(self):                              # Generates moves for all pieces on the board (stored in each piece's legalmoves array)
         legalMovesList = self.pieceList                   # Does not account for pins, en passant, or castling
@@ -248,8 +260,12 @@ class Board:
     # TODO: Allow usage of commands in terminal to improve testing
     def initialize(self):
         self.generatePieceList()
-        self.generateAllMoves()
-        self.markBoardTiles()
-        self.clearUnsafeKingSquares()
-        self.cullPins()
-        print("Board initialized successfully.")
+        if self.sanityCheck():
+            self.generateAllMoves()
+            self.markBoardTiles()
+            self.clearUnsafeKingSquares()
+            self.cullPins()
+            self.initialized = True
+            print("Board initialized successfully.")
+        else:
+            print("Board failed to initialize.")

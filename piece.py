@@ -4,6 +4,7 @@ class Piece:
         self.mailbox = mailbox              # Its location on the board
         self.team = team                    # White/Black
         self.offsets = []
+        self.legalMoves = []
         self.xray = {}                     # Array of pieces attacked indirectly through another (x-ray vision)
 
     def xraySearch(self,offset,target,board):
