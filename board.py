@@ -236,3 +236,13 @@ class Board:
                                 pinnedPiece.legalMoves = newLegalMoves
                             else:
                                 pinnedPiece.legalMoves = []
+    
+    # High-level function, coordinates board readiness of use for move pondering and other functions into one process.
+    # TODO: Allow usage of commands in terminal to improve testing
+    def initialize(self):
+        self.generatePieceList()
+        self.generateAllMoves()
+        self.markBoardTiles()
+        self.clearUnsafeKingSquares()
+        self.cullPins()
+        print("Board initialized")
