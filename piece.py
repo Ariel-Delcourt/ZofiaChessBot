@@ -23,9 +23,11 @@ class Pawn(Piece):
         self.name = 'P'
         self.value = 1
 
+    # Generates pawn moves, this one is different from the line of sight pieces, and so has its own move generation method
+    # legal moves are stored in an array of tuples given by (coordinate of piece, action, coordinate of move),
+    # where action can be one of: 'move', 'capture', or 'castle'.
     def generateMoves(self, board):
-        legalMoves = []                                         # legal moves are stored in an array of tuples given by (coordinate of piece, action, coordinate of move),
-                                                                # where action can be one of: 'move', 'capture', or 'castle'.
+        legalMoves = []                                         
         if (self.team == 'white'):                              # For team white, pawn moves up
             #---- QUIET MOVES ----#
             capture = [9,11]                                     # Only possible capture moves for pawn (TODO: en passant)
@@ -82,7 +84,7 @@ class King(Piece):
     def __init__(self, team, mailbox):
         super().__init__(team, mailbox)
         self.name = 'K'
-        self.value = float("inf")
+        self.value = float("inf")               # The king has infinite value, useful for move consideration
 
     def cullUnsafeMoves(self,board):
         newLegalMoves = []
