@@ -1,9 +1,9 @@
 class Tile:
     def __init__(self, name, mailbox, piece):
         self.name = name        # a5, g2, ect...
-        self.mailbox = mailbox  #Location on the board
+        self.mailbox = mailbox  # Location on the board
         self.piece = piece
-        self.watchedBy = {'white': [], 'black': []}            #The array contains pieces watching this square
+        self.watchedBy = {'white': [], 'black': []}            # The array contains pieces watching this square
 
     @staticmethod
     def mailboxToRank(mailbox):

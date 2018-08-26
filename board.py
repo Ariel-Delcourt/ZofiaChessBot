@@ -7,6 +7,10 @@ class Board:
     
     def __init__(self):
         self.board = []
+        self.canCastle = {'black':{'kingside':False, 'queenside':False}, 'white': {'kingside':False, 'queenside':False}}
+        self.currentTurn = 0
+        self.playerTurnToPlay = 'white'
+        self.enPassantSquare = None
         
     def makeBoard(self):
         finalBoard = []
@@ -53,6 +57,12 @@ class Board:
         self.board[94].piece = Queen('black', self.board[94].mailbox)
         self.board[25].piece = King('white', self.board[25].mailbox)
         self.board[95].piece = King('black', self.board[95].mailbox)
+        self.canCastle['white']['kingside'] = True
+        self.canCastle['white']['queenside'] = True
+        self.canCastle['black']['kingside'] = True
+        self.canCastle['black']['queenside'] = True
+        self.currentTurn = 1
+        self.playerTurnToPlay = 'white'
 
     def display(self):
         counter = 0
@@ -103,7 +113,7 @@ class Board:
         else:
             print("Incorrect piece code")
     
-    def generatePieceList(self):        #Generates multi-level dictionary containing objects of all pieces on the board
+    def generatePieceList(self):        # Generates multi-level dictionary containing objects of all pieces on the board
         pieceList = {
             'white': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}},
             'black': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}}
@@ -114,8 +124,8 @@ class Board:
                 pieceList[tile.piece.team][tile.piece.name][tile.piece.mailbox] = tile.piece
         self.pieceList = pieceList
 
-    def generateAllMoves(self):                              #Generates moves for all pieces on the board (stored in each piece's legalmoves array)
-        legalMovesList = self.pieceList                   #Does not account for pins, en passant, or castling
+    def generateAllMoves(self):                              # Generates moves for all pieces on the board (stored in each piece's legalmoves array)
+        legalMovesList = self.pieceList                   # Does not account for pins, en passant, or castling
         for pieceName in legalMovesList['white'].items():
             for mailbox in pieceName[1]:
                 pieceName[1][mailbox].generateMoves(self.board)
@@ -137,31 +147,33 @@ class Board:
     def clearUnsafeKingSquares(self):
         next(iter((self.pieceList['white']['K'].items())))[1].cullUnsafeMoves(self.board)
         next(iter((self.pieceList['black']['K'].items())))[1].cullUnsafeMoves(self.board)
-                                                                                #A bit of a ridiculous way to access the king in this particular structure: due to the fact that
-                                                                                #dict.items() operates using views instead of lists, this is the fastest usage of iter and is thread-safe
-                                                                                #See: https://blog.labix.org/2008/06/27/watch-out-for-listdictkeys-in-python-3 and
-                                                                                #https://stackoverflow.com/questions/18552001/accessing-dict-keys-element-by-index-in-python3/27638751#27638751
+                                                                                # A bit of a ridiculous way to access the king in this particular structure: due to the fact that
+                                                                                # dict.items() operates using views instead of lists, this is the fastest usage of iter and is thread-safe
+                                                                                # See: https://blog.labix.org/2008/06/27/watch-out-for-listdictkeys-in-python-3 and
+                                                                                # https://stackoverflow.com/questions/18552001/accessing-dict-keys-element-by-index-in-python3/27638751#27638751
 
+
+    # Splits up FEN into sections for use in boardFromFen()
     @staticmethod
     def formatFEN(FEN):
-        FEN = FEN.split("/")            #Splits FEN using slashes at first
-        FENTip = FEN[7].split(' ')      #Additionally splits the ending by spaces
-        FEN = FEN[:7] + FENTip          #Concatenates the slash split and space split arrays
+        FEN = FEN.split("/")            # Splits FEN using slashes at first
+        FENTip = FEN[7].split(' ')      # Additionally splits the ending by spaces
+        FEN = FEN[:7] + FENTip          # Concatenates the slash split and space split arrays
         return FEN
 
-    def boardFromFEN(self, FEN):
+    # Works its way DOWN the board form white's perspective (start rank 8, end rank 1) from left to right, adding appropriate piece from FEN as 
+    # Designed in Forsyth-Edwards notation. See: https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
+    def boardFromFEN(self, FEN):        
         self.clearBoard()
         FEN = self.formatFEN(FEN)
-        print(FEN)
+        print(FEN)                              # Can be taken out
         index = 0
         for section in FEN:
-            if index > 7:               #Currently does not handle other information for board state
-                return
-            else:
-                target = 91 - (index * 10)      #FEN moves from top to bottom
+            if index < 8:
+                target = 91 - (index * 10)      # FEN moves from top to bottom
                 for piece in section:
                     try:
-                        piece = int(piece)      #If value is empty space(s), move the target by that much
+                        piece = int(piece)      # If value is empty space(s), move the target by that much
                         target += piece
                         continue
                     except Exception:
@@ -173,7 +185,31 @@ class Board:
                     else:
                         self.addPiece(piece, 'white', target)
                         target += 1
-                index += 1
+            elif index == 8:
+                if FEN[7] == 'w':
+                    self.playerTurnToPlay = 'white'
+                else:
+                    self.playerTurnToPlay = 'black'
+            elif index == 9:
+                castlingRights = FEN[8]                         # Optimized variable usage
+                for letter in castlingRights:
+                    if letter == '-':
+                        pass
+                    elif letter == 'K':
+                        self.canCastle['white']['kingside'] = True      # Castling is handled in an orderly KQkq or - format in the FEN, see FEN notation reference
+                    elif letter == 'Q':
+                        self.canCastle['white']['queenside'] = True
+                    elif letter == 'k':
+                        self.canCastle['black']['kingside'] = True
+                    elif letter == 'q':
+                        self.canCastle['black']['kingside'] = True
+            elif index == 10:
+                self.enPassantSquare = FEN[9]
+            elif index == 11:
+                self.halfmoveClock = FEN[10]                            # Halfmove clock is number of halfmoves since last capture or pawn advance, can be used for draw under 50-move rule
+            elif index == 12:
+                self.currentTurn = FEN[11]
+            index += 1
     
     def cullPins(self):
         pieceNames = ['B','Q','R']
@@ -187,15 +223,13 @@ class Board:
                         pinTarget = xray[1]
                         pinnedPiece = xray[0]
                         inverseOffset = offset * (-1)
-                        if (pinTarget.name == 'K') and (pinTarget.team != piece.team) and (pinnedPiece.team != piece.team):      #If king is enemy and being pinned with enemy piece
-                            if (pinnedPiece.name != 'P') and (inverseOffset in pinnedPiece.offsets):                     #If piece is Bishop, Queen, or Rook (Not accounted for pawns yet)
+                        if (pinTarget.name == 'K') and (pinTarget.team != piece.team) and (pinnedPiece.team != piece.team):      # If king is enemy and being pinned with enemy piece
+                            if (pinnedPiece.name != 'P') and (inverseOffset in pinnedPiece.offsets):                     # If piece is Bishop, Queen, or Rook (Not accounted for pawns yet)
                                 newLegalMoves = []
-                                target = pinnedPiece.mailbox + inverseOffset
-                                # This loop moves tile by tile, assessing the presence of a piece or out of bounds
-                                # If a piece is found, it attempts to see the pieces behind it, accounting for pins and xray attacks
-                                while ((self.board[target].mailbox > 0) and (self.board[target].piece is None)):
-                                    newLegalMoves.append(('move', target))   # Format for move storage: ('move'/'capture', mailbox of where move would put this piece)
-                                    target += inverseOffset
+                                target = pinnedPiece.mailbox + inverseOffset       
+                                while ((self.board[target].mailbox > 0) and (self.board[target].piece is None)):        # This loop moves tile by tile, assessing the presence of a piece or out of bounds
+                                    newLegalMoves.append(('move', target))                                              # If a piece is found, it attempts to see the pieces behind it, accounting for pins and xray attacks
+                                    target += inverseOffset                                                             # Format for move storage: ('move'/'capture', mailbox of where move would put this piece)
                                 if (self.board[target].piece is not None):
                                     if (self.board[target].piece.team != pinnedPiece.team):
                                         newLegalMoves.append(('capture', target))

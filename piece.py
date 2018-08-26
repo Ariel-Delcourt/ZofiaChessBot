@@ -23,38 +23,38 @@ class Pawn(Piece):
         self.value = 1
 
     def generateMoves(self, board):
-        legalMoves = []                                         #legal moves are stored in an array of tuples given by (coordinate of piece, action, coordinate of move),
-                                                                #where action can be one of: 'move', 'capture', or 'castle'.
-        if (self.team == 'white'):                              #For team white, pawn moves up
+        legalMoves = []                                         # legal moves are stored in an array of tuples given by (coordinate of piece, action, coordinate of move),
+                                                                # where action can be one of: 'move', 'capture', or 'castle'.
+        if (self.team == 'white'):                              # For team white, pawn moves up
             #---- QUIET MOVES ----#
-            capture = [9,11]                                     #Only possible capture moves for pawn (TODO: en passant)
-            if (board[self.mailbox + 10].piece is None):         #Checks for obstructing piece in front
-                if (board[self.mailbox + 10].mailbox > 0):      #Checks out of bounds
+            capture = [9,11]                                     # Only possible capture moves for pawn (TODO: en passant)
+            if (board[self.mailbox + 10].piece is None):         # Checks for obstructing piece in front
+                if (board[self.mailbox + 10].mailbox > 0):      # Checks out of bounds
                     legalMoves.append(('move', self.mailbox + 10))
-                if (30 < self.mailbox < 39):                     #Checks for double move option
+                if (30 < self.mailbox < 39):                     # Checks for double move option
                     if (board[self.mailbox + 20].piece is None):
                         legalMoves.append(('move', self.mailbox + 20))
             #---- CAPTURE MOVES ----#
-            for offset in capture:                              #Checks all capture possibilities
+            for offset in capture:                              # Checks all capture possibilities
                 if (board[self.mailbox + offset].piece is not None):
                     if (board[self.mailbox + offset].piece.team == 'black'):
-                        if (board[self.mailbox + offset].mailbox > 0): #Checks out of bounds
+                        if (board[self.mailbox + offset].mailbox > 0): # Checks out of bounds
                             legalMoves.append(('capture', self.mailbox + offset))
 
-        else:                                                   #For team black, pawn moves down
+        else:                                                   # For team black, pawn moves down
             #---- QUIET MOVES ----#
-            capture = [-11,-9]                                    #Only possible capture moves for pawn (TODO: en passant)
-            if (board[self.mailbox - 10].piece is None):         #Checks for obstructing piece in front
-                if (board[self.mailbox - 10].mailbox > 0):      #Checks for out of bounds move
+            capture = [-11,-9]                                    # Only possible capture moves for pawn (TODO: en passant)
+            if (board[self.mailbox - 10].piece is None):         # Checks for obstructing piece in front
+                if (board[self.mailbox - 10].mailbox > 0):      # Checks for out of bounds move
                     legalMoves.append(('move', self.mailbox - 10))
-                if (80 < self.mailbox < 89):                     #Checks for double move option
+                if (80 < self.mailbox < 89):                     # Checks for double move option
                     if (board[self.mailbox - 20].piece is None):
                         legalMoves.append(('move', self.mailbox - 20))
             #---- CAPTURE MOVES ----#
-            for offset in capture:                              #Checks all capture possibilities
+            for offset in capture:                              # Checks all capture possibilities
                 if (board[self.mailbox + offset].piece is not None):
                     if (board[self.mailbox + offset].piece.team == 'white'):
-                        if (board[self.mailbox + offset].mailbox > 0):         #Checks out of bounds
+                        if (board[self.mailbox + offset].mailbox > 0):         # Checks out of bounds
                             legalMoves.append(('capture', self.mailbox + offset))
         self.legalMoves = legalMoves
     
