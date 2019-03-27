@@ -34,5 +34,7 @@ class Tile:
 
     @staticmethod
     def coordinateToMailbox(coordinate):
+        if isinstance(coordinate, int):
+            return coordinate
         coordinate = str.capitalize(coordinate)
         return Tile.fileToMailbox(coordinate[0]) + Tile.rankToMailbox(coordinate[1])

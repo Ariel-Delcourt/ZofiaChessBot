@@ -7,11 +7,22 @@ class Board:
     
     def __init__(self):
         self.board = []
-        self.canCastle = {'black':{'kingside':False, 'queenside':False}, 'white': {'kingside':False, 'queenside':False}}
+        self.canCastle = {
+            'black':{'kingside':False, 'queenside':False},
+            'white': {'kingside':False, 'queenside':False}
+            }
         self.currentTurn = 0
         self.playerTurnToPlay = 'white'
         self.enPassantSquare = None
-        self.initialized = False
+        self.initialized = False 
+        self.pieceList = {
+            'white': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}},
+            'black': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}}
+            }
+        self.deadPieces = {
+            'black': {'P': 0, 'N': 0, 'B': 0, 'R': 0, 'Q': 0},
+            'white': {'P': 0, 'N': 0, 'B': 0, 'R': 0, 'Q': 0}
+            }
         
     def makeBoard(self):
         finalBoard = []
@@ -122,15 +133,13 @@ class Board:
         print("Tile", coordinate, "cleared successfully.")
     
     def generatePieceList(self):        # Generates multi-level dictionary containing objects of all pieces on the board
-        pieceList = {
+        self.pieceList = {
             'white': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}},
             'black': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}}
             }
-        
         for tile in self.board:
             if (tile.piece is not None):
-                pieceList[tile.piece.team][tile.piece.name][tile.piece.mailbox] = tile.piece
-        self.pieceList = pieceList
+                self.pieceList[tile.piece.team][tile.piece.name][tile.piece.mailbox] = tile.piece
 
     def sanityCheck(self):
         sanity = True
@@ -171,6 +180,20 @@ class Board:
                                                                                 # See: https://blog.labix.org/2008/06/27/watch-out-for-listdictkeys-in-python-3 and
                                                                                 # https://stackoverflow.com/questions/18552001/accessing-dict-keys-element-by-index-in-python3/27638751#27638751
 
+    def movePiece(self, mailbox, destination):
+        mailbox = Tile.coordinateToMailbox(mailbox)
+        destination = Tile.coordinateToMailbox(destination)
+        movingPiece = self.board[mailbox].piece
+        targetPiece = self.board[destination].piece
+        for (moveType, target) in movingPiece.legalMoves:
+            if destination == target:
+                if moveType == 'move':
+                    self.board[destination].piece = movingPiece
+                    self.board[mailbox].piece = None
+                elif moveType == 'capture':
+                    self.deadPieces[targetPiece.team][targetPiece.name] += 1
+                    self.board[destination].piece = movingPiece
+                    self.board[mailbox].piece = None
 
     # Splits up FEN into sections for use in boardFromFen()
     @staticmethod
