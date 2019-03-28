@@ -7,6 +7,7 @@ class Board:
     
     def __init__(self):
         self.board = []
+        self.kingChecked = {'white': False, 'black': False}
         self.canCastle = {
             'black':{'kingside':False, 'queenside':False},
             'white': {'kingside':False, 'queenside':False}
@@ -16,8 +17,8 @@ class Board:
         self.enPassantSquare = None
         self.initialized = False 
         self.pieceList = {
-            'white': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}},
-            'black': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}}
+            'white': {'P': [], 'N': [], 'B': [], 'R': [], 'Q': [], 'K': []},
+            'black': {'P': [], 'N': [], 'B': [], 'R': [], 'Q': [], 'K': []}
             }
         self.deadPieces = {
             'black': {'P': 0, 'N': 0, 'B': 0, 'R': 0, 'Q': 0},
@@ -77,6 +78,7 @@ class Board:
         self.currentTurn = 1
         self.playerTurnToPlay = 'white'
 
+
     def display(self):
         counter = 0
         displayArray = []
@@ -134,12 +136,12 @@ class Board:
     
     def generatePieceList(self):        # Generates multi-level dictionary containing objects of all pieces on the board
         self.pieceList = {
-            'white': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}},
-            'black': {'P': {}, 'N': {}, 'B': {}, 'R': {}, 'Q': {}, 'K': {}}
+            'white': {'P': [], 'N': [], 'B': [], 'R': [], 'Q': [], 'K': []},
+            'black': {'P': [], 'N': [], 'B': [], 'R': [], 'Q': [], 'K': []}
             }
         for tile in self.board:
             if (tile.piece is not None):
-                self.pieceList[tile.piece.team][tile.piece.name][tile.piece.mailbox] = tile.piece
+                self.pieceList[tile.piece.team][tile.piece.name].append(tile.piece)
 
     def sanityCheck(self):
         sanity = True
@@ -155,30 +157,26 @@ class Board:
     def generateAllMoves(self):                              # Generates moves for all pieces on the board (stored in each piece's legalmoves array)
         legalMovesList = self.pieceList                   # Does not account for pins, en passant, or castling
         for pieceName in legalMovesList['white'].items():
-            for mailbox in pieceName[1]:
-                pieceName[1][mailbox].generateMoves(self.board)
+            for piece in pieceName[1]:
+                piece.generateMoves(self.board)
         for pieceName in legalMovesList['black'].items():
-            for mailbox in pieceName[1]:
-                pieceName[1][mailbox].generateMoves(self.board)
+            for piece in pieceName[1]:
+                piece.generateMoves(self.board)
     
     def markBoardTiles(self):
         legalMovesList = self.pieceList
         for pieceName in legalMovesList['white'].items():
-            for mailbox in pieceName[1]:
-                for move, target in pieceName[1][mailbox].legalMoves:
-                    self.board[target].watchedBy['white'].append(pieceName[1][mailbox])
+            for piece in pieceName[1]:
+                for move, target in piece.legalMoves:
+                    self.board[target].watchedBy['white'].append(piece)
         for pieceName in legalMovesList['black'].items():
             for mailbox in pieceName[1]:
-                for move, target in pieceName[1][mailbox].legalMoves:
-                    self.board[target].watchedBy['black'].append(pieceName[1][mailbox])
+                for move, target in piece.legalMoves:
+                    self.board[target].watchedBy['black'].append(piece)
     
     def clearUnsafeKingSquares(self):
-        next(iter((self.pieceList['white']['K'].items())))[1].cullUnsafeMoves(self.board)
-        next(iter((self.pieceList['black']['K'].items())))[1].cullUnsafeMoves(self.board)
-                                                                                # A bit of a ridiculous way to access the king in this particular structure: due to the fact that
-                                                                                # dict.items() operates using views instead of lists, this is the fastest usage of iter and is thread-safe
-                                                                                # See: https://blog.labix.org/2008/06/27/watch-out-for-listdictkeys-in-python-3 and
-                                                                                # https://stackoverflow.com/questions/18552001/accessing-dict-keys-element-by-index-in-python3/27638751#27638751
+        self.pieceList['white']['K'][0].cullUnsafeMoves(self.board)
+        self.pieceList['black']['K'][0].cullUnsafeMoves(self.board)
 
     def movePiece(self, mailbox, destination):
         mailbox = Tile.coordinateToMailbox(mailbox)
@@ -187,6 +185,7 @@ class Board:
         targetPiece = self.board[destination].piece
         for (moveType, target) in movingPiece.legalMoves:
             if destination == target:
+                movingPiece.mailbox = destination
                 if moveType == 'move':
                     self.board[destination].piece = movingPiece
                     self.board[mailbox].piece = None
@@ -194,6 +193,9 @@ class Board:
                     self.deadPieces[targetPiece.team][targetPiece.name] += 1
                     self.board[destination].piece = movingPiece
                     self.board[mailbox].piece = None
+                return True
+        print('Illegal Move')
+        return False
 
     # Splits up FEN into sections for use in boardFromFen()
     @staticmethod
@@ -258,7 +260,7 @@ class Board:
         teamNames = ['white','black']
         for team in teamNames:
             for pieceName in pieceNames:
-                for mailbox, piece in self.pieceList[team][pieceName].items():
+                for piece in self.pieceList[team][pieceName]:
                     for offset, xray in piece.xray.items():
                         if len(xray) < 2:
                             continue

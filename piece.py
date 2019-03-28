@@ -69,15 +69,14 @@ class Knight(Piece):
         self.value = 3
 
     def generateMoves(self, board):
-        legalMoves = []
+        self.legalMoves = []
         offsets = [19,21,8,12,-8,-12,-19,-21]
         for offset in offsets:
             if (board[self.mailbox + offset].mailbox > 0):
                 if (board[self.mailbox + offset].piece is None):
-                    legalMoves.append(('move', self.mailbox + offset))
+                    self.legalMoves.append(('move', self.mailbox + offset))
                 elif (board[self.mailbox + offset].piece.team != self.team):
-                    legalMoves.append(('capture', self.mailbox + offset))
-        self.legalMoves = legalMoves
+                    self.legalMoves.append(('capture', self.mailbox + offset))
         
 class King(Piece):
 
@@ -99,15 +98,14 @@ class King(Piece):
         self.legalMoves = newLegalMoves
 
     def generateMoves(self, board):
-        legalMoves = []
+        self.legalMoves = []
         offsets = [1,11,10,9,-1,-11,-10,-9]
         for offset in offsets:
             if (board[self.mailbox + offset].mailbox > 0):
                 if (board[self.mailbox + offset].piece is None):
-                    legalMoves.append(('move', self.mailbox + offset))
+                    self.legalMoves.append(('move', self.mailbox + offset))
                 elif (board[self.mailbox + offset].piece.team != self.team):
-                    legalMoves.append(('capture', self.mailbox + offset))
-        self.legalMoves = legalMoves
+                    self.legalMoves.append(('capture', self.mailbox + offset))
 
 class Bishop(Piece):
 
