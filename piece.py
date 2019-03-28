@@ -36,7 +36,7 @@ class Pawn(Piece):
                     legalMoves.append(('move', self.mailbox + 10))
                 if (30 < self.mailbox < 39):                     # Checks for double move option
                     if (board[self.mailbox + 20].piece is None):
-                        legalMoves.append(('move', self.mailbox + 20))
+                        legalMoves.append(('doubleMove', self.mailbox + 20))
             #---- CAPTURE MOVES ----#
             for offset in capture:                              # Checks all capture possibilities
                 if (board[self.mailbox + offset].piece is not None):
@@ -52,7 +52,7 @@ class Pawn(Piece):
                     legalMoves.append(('move', self.mailbox - 10))
                 if (80 < self.mailbox < 89):                     # Checks for double move option
                     if (board[self.mailbox - 20].piece is None):
-                        legalMoves.append(('move', self.mailbox - 20))
+                        legalMoves.append(('doubleMove', self.mailbox - 20))
             #---- CAPTURE MOVES ----#
             for offset in capture:                              # Checks all capture possibilities
                 if (board[self.mailbox + offset].piece is not None):
@@ -87,13 +87,13 @@ class King(Piece):
 
     def cullUnsafeMoves(self,board):
         newLegalMoves = []
-        if self.team == 'white':
+        if (self.team == 'white'):
             for move, target in self.legalMoves:
-                if len(board[target].watchedBy['black']) == 0:
+                if (len(board[target].watchedBy['black']) == 0):
                     newLegalMoves.append((move,target))
         else:
             for move, target in self.legalMoves:
-                if len(board[target].watchedBy['white']) == 0:
+                if (len(board[target].watchedBy['white']) == 0):
                     newLegalMoves.append((move,target))
         self.legalMoves = newLegalMoves
 

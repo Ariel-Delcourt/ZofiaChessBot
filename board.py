@@ -1,6 +1,8 @@
-from tile import Tile
+from colorama import Back, Fore, init
+
 from piece import *
-from colorama import Fore, Back, init
+from tile import Tile
+
 init()
 
 class Board:
@@ -8,10 +10,8 @@ class Board:
     def __init__(self):
         self.board = []
         self.kingChecked = {'white': False, 'black': False}
-        self.canCastle = {
-            'black':{'kingside':False, 'queenside':False},
-            'white': {'kingside':False, 'queenside':False}
-            }
+        self.rookMoved = {'black': {'queenside': False, 'kingside': False}, 'white': {'queenside': False, 'kingside': False}}
+        self.kingMoved = {'black': False, 'white': False}
         self.currentTurn = 0
         self.playerTurnToPlay = 'white'
         self.enPassantSquare = None
@@ -71,15 +71,12 @@ class Board:
         self.board[94].piece = Queen('black', self.board[94].mailbox)
         self.board[25].piece = King('white', self.board[25].mailbox)
         self.board[95].piece = King('black', self.board[95].mailbox)
-        self.canCastle['white']['kingside'] = True
-        self.canCastle['white']['queenside'] = True
-        self.canCastle['black']['kingside'] = True
-        self.canCastle['black']['queenside'] = True
         self.currentTurn = 1
         self.playerTurnToPlay = 'white'
 
 
     def display(self):
+        print()
         counter = 0
         displayArray = []
         currentRank = []
@@ -170,7 +167,7 @@ class Board:
                 for move, target in piece.legalMoves:
                     self.board[target].watchedBy['white'].append(piece)
         for pieceName in legalMovesList['black'].items():
-            for mailbox in pieceName[1]:
+            for piece in pieceName[1]: 
                 for move, target in piece.legalMoves:
                     self.board[target].watchedBy['black'].append(piece)
     
@@ -178,22 +175,146 @@ class Board:
         self.pieceList['white']['K'][0].cullUnsafeMoves(self.board)
         self.pieceList['black']['K'][0].cullUnsafeMoves(self.board)
 
+    '''
+    King must not have moved
+    King must not be in check
+    Castling rook must not have moved
+    Any squares the King passes through or into must:
+        Not be watched by any opposing piece
+        Not contain any other pieces
+    '''
+    def generateCastleMoves(self):
+        if (not (self.kingChecked['white']) and not (self.kingMoved['white'])):
+            if (not (self.rookMoved['white']['queenside']) and (len(self.board[24].watchedBy['black']) == 0) and (len(self.board[23].watchedBy['black']) == 0)):
+                if (self.board[24].piece is None) and (self.board[23].piece is None) and (self.board[22].piece is None):
+                    self.pieceList['white']['K'][0].legalMoves.append(('castle', 23))
+            if (not (self.rookMoved['white']['kingside']) and (len(self.board[26].watchedBy['black']) == 0) and (len(self.board[27].watchedBy['black']) == 0)):
+                if (self.board[26].piece is None) and (self.board[27].piece is None):
+                    self.pieceList['white']['K'][0].legalMoves.append(('castle', 27))
+        if (not (self.kingChecked['black']) and not (self.kingMoved['black'])):
+            if (not (self.rookMoved['black']['queenside']) and (len(self.board[94].watchedBy['white']) == 0) and (len(self.board[93].watchedBy['white']) == 0)):
+                if (self.board[94].piece is None) and (self.board[93].piece is None) and (self.board[92].piece is None):
+                    self.pieceList['black']['K'][0].legalMoves.append(('castle', 93))
+            if (not (self.rookMoved['black']['kingside']) and (len(self.board[96].watchedBy['white']) == 0) and (len(self.board[97].watchedBy['white']) == 0)):
+                if (self.board[96].piece is None) and (self.board[97].piece is None):
+                    self.pieceList['black']['K'][0].legalMoves.append(('castle', 97))
+    
+    def generateEnPassantMoves(self):
+        destination = self.enPassantSquare
+        capturingTeam = None
+        referenceTile = None
+        if destination > 50:                                    # If the en passant square from the FEN is a lower mailbox than 50, then it is an en passant move for black pawns
+            referenceTile = destination - 10
+            capturingTeam = 'white'
+        else:
+            referenceTile = destination + 10
+            capturingTeam = 'black'
+        print(capturingTeam)
+        print(destination)
+        if self.board[referenceTile + 1].piece is not None:
+            print('got here')
+            if (self.board[referenceTile + 1].piece.name == 'P') and (self.board[referenceTile + 1].piece.team == capturingTeam):           # If there are pawns on the capturing team to give en passant legality to... do so
+                self.board[referenceTile + 1].piece.legalMoves.append(('enPassant', destination))
+                print(self.board[referenceTile + 1].piece.legalMoves)
+        if self.board[referenceTile - 1].piece is not None:
+            if (self.board[referenceTile - 1].piece.name == 'P') and (self.board[referenceTile - 1].piece.team == capturingTeam):
+                self.board[referenceTile - 1].piece.legalMoves.append(('enPassant', destination))
+    
+    def areKingsChecked(self):
+        if (len(self.board[self.pieceList['black']['K'][0].mailbox].watchedBy['white']) > 0):
+            self.kingChecked['black'] = True
+        else:
+            self.kingChecked['black'] = False
+        
+        if (len(self.board[self.pieceList['white']['K'][0].mailbox].watchedBy['black']) > 0):
+            self.kingChecked['white'] = True
+        else:
+            self.kingChecked['white'] = False
+
+    # Specify location of piece to be moved and location of its destination, removes piece from current tile and replaces the piece at its destination
+    # Grants en passant to neighboring pawns after a pawn double move if they exist
+    # Handles castling move logic
+    # Handles en passant move logic
+    # Returns true if move was legal, false otherwise
     def movePiece(self, mailbox, destination):
         mailbox = Tile.coordinateToMailbox(mailbox)
         destination = Tile.coordinateToMailbox(destination)
         movingPiece = self.board[mailbox].piece
+        if movingPiece is None:
+            print('Illegal Move, chosen tile is empty')
+            return False
         targetPiece = self.board[destination].piece
         for (moveType, target) in movingPiece.legalMoves:
             if destination == target:
                 movingPiece.mailbox = destination
+
                 if moveType == 'move':
                     self.board[destination].piece = movingPiece
                     self.board[mailbox].piece = None
+                
+                elif moveType == 'doubleMove':
+                    self.board[destination].piece = movingPiece
+                    self.board[mailbox].piece = None
+                    if movingPiece.team == 'white':
+                        self.enPassantSquare = destination - 10
+                    else:
+                        self.enPassantSquare = destination + 10
+                    self.generateEnPassantMoves()
+                
                 elif moveType == 'capture':
                     self.deadPieces[targetPiece.team][targetPiece.name] += 1
                     self.board[destination].piece = movingPiece
                     self.board[mailbox].piece = None
-                return True
+                
+                elif moveType == 'castle':
+                    if movingPiece.team == 'white':
+                        if destination == 23:
+                            targetRook = self.board[21].piece
+                            targetRook.mailbox = 23
+                            self.board[destination].piece = movingPiece
+                            self.board[mailbox].piece = None
+                            self.board[23].piece = targetRook
+                            self.board[21].piece = None
+                        elif destination == 27:
+                            targetRook = self.board[28].piece
+                            targetRook.mailbox = 25
+                            self.board[destination].piece = movingPiece
+                            self.board[mailbox].piece = None
+                            self.board[25].piece = targetRook
+                            self.board[28].piece = None
+
+                    elif movingPiece.team == 'black':
+                        if destination == 93:
+                            targetRook = self.board[91].piece
+                            targetRook.mailbox = 93
+                            self.board[destination].piece = movingPiece
+                            self.board[mailbox].piece = None
+                            self.board[93].piece = targetRook
+                            self.board[91].piece = None
+                        elif destination == 97:
+                            targetRook = self.board[98].piece
+                            targetRook.mailbox = 95
+                            self.board[destination].piece = movingPiece
+                            self.board[mailbox].piece = None
+                            self.board[95].piece = targetRook
+                            self.board[98].piece = None
+                            
+                elif moveType == 'enPassant':
+                    if movingPiece.team == 'white':                                         # If a white pawn en passant captures a black one
+                        targetPiece = self.board[destination - 10].piece
+                        self.board[destination].piece = movingPiece
+                        self.board[mailbox].piece = None
+                        self.board[destination - 10].piece = None
+                        self.deadPieces[targetPiece.team][targetPiece.name] += 1
+
+                    elif movingPiece.team == 'black':                                         # If a black pawn en passant captures a white one
+                        targetPiece = self.board[destination + 10].piece
+                        self.board[destination].piece = movingPiece
+                        self.board[mailbox].piece = None
+                        self.board[destination + 10].piece = None
+                        self.deadPieces[targetPiece.team][targetPiece.name] += 1
+
+                return True                                                                 # True for success, false for failure
         print('Illegal Move')
         return False
 
@@ -210,7 +331,7 @@ class Board:
     def boardFromFEN(self, FEN):        
         self.clearBoard()
         FEN = self.formatFEN(FEN)
-        print(FEN)                              # Can be taken out
+        print(FEN)
         index = 0
         for section in FEN:
             if index < 8:
@@ -230,29 +351,30 @@ class Board:
                         self.addPiece(piece, 'white', target)
                         target += 1
             elif index == 8:
-                if FEN[7] == 'w':
+                if FEN[8] == 'w':
                     self.playerTurnToPlay = 'white'
                 else:
                     self.playerTurnToPlay = 'black'
             elif index == 9:
-                castlingRights = FEN[8]                         # Optimized variable usage
+                castlingRights = FEN[9]                         # Optimized variable usage
                 for letter in castlingRights:
                     if letter == '-':
-                        pass
+                        self.kingMoved['white'] = True
+                        self.kingMoved['black'] = True
                     elif letter == 'K':
-                        self.canCastle['white']['kingside'] = True      # Castling is handled in an orderly KQkq or - format in the FEN, see FEN notation reference
-                    elif letter == 'Q':
-                        self.canCastle['white']['queenside'] = True
+                        self.rookMoved['white']['kingside'] = False      # Castling is handled in an orderly KQkq or - format in the FEN, see FEN notation reference
+                    elif letter == 'Q':                                 # Here the rooks being moved might be a false statement depending on the board state, 
+                        self.rookMoved['white']['queenside'] = False     # but it simplifies the meaning and results in an equivalent board state 
                     elif letter == 'k':
-                        self.canCastle['black']['kingside'] = True
+                        self.rookMoved['black']['kingside'] = False
                     elif letter == 'q':
-                        self.canCastle['black']['kingside'] = True
+                        self.rookMoved['black']['kingside'] = False
             elif index == 10:
-                self.enPassantSquare = FEN[9]
+                self.enPassantSquare = Tile.coordinateToMailbox(FEN[10])
             elif index == 11:
-                self.halfmoveClock = FEN[10]                            # Halfmove clock is number of halfmoves since last capture or pawn advance, can be used for draw under 50-move rule
+                self.halfmoveClock = FEN[11]                            # Halfmove clock is number of halfmoves since last capture or pawn advance, can be used for draw under 50-move rule
             elif index == 12:
-                self.currentTurn = FEN[11]
+                self.currentTurn = FEN[12]
             index += 1
     
     def cullPins(self):
@@ -289,7 +411,10 @@ class Board:
             self.generateAllMoves()
             self.markBoardTiles()
             self.clearUnsafeKingSquares()
+            self.generateEnPassantMoves()
             self.cullPins()
+            self.areKingsChecked()
+            self.generateCastleMoves()
             self.initialized = True
             print("Board initialized successfully.")
         else:

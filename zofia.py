@@ -1,13 +1,17 @@
-from tile import Tile
 from board import Board
 from piece import *
+from tile import Tile
 
 chessBoard = Board()
 chessBoard.makeBoard()
-chessBoard.boardFromFEN("r4rk1/pp3ppp/1n6/2qp4/6b1/2PQ1N2/P3BPPP/R3R1K1 w - -")
+chessBoard.boardFromFEN("r2qk2r/8/8/8/2Pp4/8/8/R3K2R b KQkq c3")
 chessBoard.clearTile("D2")
 chessBoard.initialize()
 chessBoard.display()
-chessBoard.movePiece('G4','F3')
+print(chessBoard.pieceList['black']['K'][0].legalMoves)
+chessBoard.movePiece('E1','G1')
+chessBoard.movePiece('E8','G8')
 chessBoard.display()
+print(chessBoard.pieceList['black']['P'][0].legalMoves)
+print(chessBoard.pieceList['white']['K'][0].legalMoves)
 input() 
