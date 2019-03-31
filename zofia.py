@@ -4,7 +4,7 @@ from tile import Tile
 
 chessBoard = Board()
 chessBoard.makeBoard()
-chessBoard.boardFromFEN("r2qk2r/8/8/8/2Pp4/8/8/R3K2R b KQkq c3")
+chessBoard.boardFromFEN("8/1kp5/8/3B4/4q3/3K4/8/8 w - -")
 chessBoard.clearTile("D2")
 chessBoard.initialize()
 chessBoard.display()

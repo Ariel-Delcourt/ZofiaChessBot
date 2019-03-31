@@ -1,5 +1,5 @@
 from colorama import Back, Fore, init
-
+from numpy import concatenate
 from piece import *
 from tile import Tile
 
@@ -201,6 +201,8 @@ class Board:
     
     def generateEnPassantMoves(self):
         destination = self.enPassantSquare
+        if destination == '-':
+            return
         capturingTeam = None
         referenceTile = None
         if destination > 50:                                    # If the en passant square from the FEN is a lower mailbox than 50, then it is an en passant move for black pawns
@@ -326,6 +328,59 @@ class Board:
         FEN = FEN[:7] + FENTip          # Concatenates the slash split and space split arrays
         return FEN
 
+    # Calculates blocking moves, killing moves, and escape moves respectively
+    # Must be run after all pins have been culled and safe king squares evaluated.
+    def cullCheckMoves(self):
+        finalMoves = []
+        if self.playerTurnToPlay == 'white':
+            king = self.pieceList['white']['K'][0]
+            if len(self.board[king.mailbox].watchedBy['black']) > 1:
+                return king.legalMoves
+            else:
+                checkingPiece = self.board[king.mailbox].watchedBy['black'][0]
+                for piece in self.board[checkingPiece.mailbox].watchedBy['white']:
+                    if piece.name != 'K':
+                        finalMoves.append(('capture',checkingPiece.mailbox))
+                finalMoves += king.legalMoves
+                if (checkingPiece.name == 'P') or (checkingPiece.name == 'N'):
+                    return finalMoves
+                else:
+                    finalMoves += self.findBlockingMoves(king, checkingPiece)
+
+        elif self.playerTurnToPlay == 'black':
+            king = self.pieceList['black']['K'][0]
+            if len(self.board[king.mailbox].watchedBy['white']) > 1:
+                return king.legalMoves
+            else:
+                checkingPiece = self.board[king.mailbox].watchedBy['white'][0]
+                for piece in self.board[checkingPiece.mailbox].watchedBy['black']:
+                    if piece.name != 'K':
+                        finalMoves.append(('capture',checkingPiece.mailbox))
+                finalMoves += king.legalMoves
+                if (checkingPiece.name == 'P') or (checkingPiece.name == 'N'):
+                    return finalMoves
+                else:
+                    finalMoves += self.findBlockingMoves(king, checkingPiece)
+        return finalMoves
+                
+    def findBlockingMoves(self, targetKing, checkingPiece):
+        offsets = checkingPiece.offsets
+        vector = targetKing.mailbox - checkingPiece.mailbox
+        selectedOffset = None
+        blockingMoves = []
+        for offset in offsets:
+            if (vector // offset > 1) and (vector % offset == 0):
+                selectedOffset = offset
+                break
+        targetMailbox = targetKing.mailbox - selectedOffset
+        while self.board[targetMailbox].piece is None:
+            possiblePieces = self.board[targetMailbox].watchedBy[targetKing.team]
+            if len(possiblePieces) > 0:
+                for piece in possiblePieces:
+                    blockingMoves.append(('move', targetMailbox))
+            targetMailbox -= selectedOffset
+        return blockingMoves
+
     # Works its way DOWN the board form white's perspective (start rank 8, end rank 1) from left to right, adding appropriate piece from FEN as 
     # Designed in Forsyth-Edwards notation. See: https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
     def boardFromFEN(self, FEN):        
@@ -370,7 +425,10 @@ class Board:
                     elif letter == 'q':
                         self.rookMoved['black']['kingside'] = False
             elif index == 10:
-                self.enPassantSquare = Tile.coordinateToMailbox(FEN[10])
+                if FEN[10] == '-':
+                     self.enPassantSquare = '-'
+                else:
+                    self.enPassantSquare = Tile.coordinateToMailbox(FEN[10])
             elif index == 11:
                 self.halfmoveClock = FEN[11]                            # Halfmove clock is number of halfmoves since last capture or pawn advance, can be used for draw under 50-move rule
             elif index == 12:
@@ -415,6 +473,7 @@ class Board:
             self.cullPins()
             self.areKingsChecked()
             self.generateCastleMoves()
+            print("cullcheckmoves: ", self.cullCheckMoves())
             self.initialized = True
             print("Board initialized successfully.")
         else:
