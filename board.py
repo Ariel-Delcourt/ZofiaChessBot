@@ -151,7 +151,7 @@ class Board:
         return sanity
         
 
-    def generateAllMoves(self):                              # Generates moves for all pieces on the board (stored in each piece's legalmoves array)
+    def generateAllMoves(self):                              # Generates moves for all pieces on the board (stored in each piece's legalmoves dict)
         legalMovesList = self.pieceList                   # Does not account for pins, en passant, or castling
         for pieceName in legalMovesList['white'].items():
             for piece in pieceName[1]:
@@ -159,16 +159,16 @@ class Board:
         for pieceName in legalMovesList['black'].items():
             for piece in pieceName[1]:
                 piece.generateMoves(self.board)
-    
+
     def markBoardTiles(self):
         legalMovesList = self.pieceList
         for pieceName in legalMovesList['white'].items():
-            for piece in pieceName[1]:
-                for move, target in piece.legalMoves:
+            for piece in pieceName[1]:    
+                for origin, move, target in piece.listAllLegalMoves():
                     self.board[target].watchedBy['white'].append(piece)
         for pieceName in legalMovesList['black'].items():
             for piece in pieceName[1]: 
-                for move, target in piece.legalMoves:
+                for origin, move, target in piece.listAllLegalMoves():
                     self.board[target].watchedBy['black'].append(piece)
     
     def clearUnsafeKingSquares(self):
@@ -185,19 +185,22 @@ class Board:
     '''
     def generateCastleMoves(self):
         if (not (self.kingChecked['white']) and not (self.kingMoved['white'])):
+            king = self.pieceList['white']['K'][0]
             if (not (self.rookMoved['white']['queenside']) and (len(self.board[24].watchedBy['black']) == 0) and (len(self.board[23].watchedBy['black']) == 0)):
                 if (self.board[24].piece is None) and (self.board[23].piece is None) and (self.board[22].piece is None):
-                    self.pieceList['white']['K'][0].legalMoves.append(('castle', 23))
+                    king.legalMoves.append((king.mailbox, 'castle', 23))
             if (not (self.rookMoved['white']['kingside']) and (len(self.board[26].watchedBy['black']) == 0) and (len(self.board[27].watchedBy['black']) == 0)):
                 if (self.board[26].piece is None) and (self.board[27].piece is None):
-                    self.pieceList['white']['K'][0].legalMoves.append(('castle', 27))
+                    self.pieceList['white']['K'][0].legalMoves.append((king.mailbox, 'castle', 27))
+
         if (not (self.kingChecked['black']) and not (self.kingMoved['black'])):
+            king = self.pieceList['black']['K'][0]
             if (not (self.rookMoved['black']['queenside']) and (len(self.board[94].watchedBy['white']) == 0) and (len(self.board[93].watchedBy['white']) == 0)):
                 if (self.board[94].piece is None) and (self.board[93].piece is None) and (self.board[92].piece is None):
-                    self.pieceList['black']['K'][0].legalMoves.append(('castle', 93))
+                    king.legalMoves.append((king.mailbox, 'castle', 93))
             if (not (self.rookMoved['black']['kingside']) and (len(self.board[96].watchedBy['white']) == 0) and (len(self.board[97].watchedBy['white']) == 0)):
                 if (self.board[96].piece is None) and (self.board[97].piece is None):
-                    self.pieceList['black']['K'][0].legalMoves.append(('castle', 97))
+                    king.legalMoves.append((king.mailbox, 'castle', 97))
     
     def generateEnPassantMoves(self):
         destination = self.enPassantSquare
@@ -211,16 +214,14 @@ class Board:
         else:
             referenceTile = destination + 10
             capturingTeam = 'black'
-        print(capturingTeam)
-        print(destination)
         if self.board[referenceTile + 1].piece is not None:
-            print('got here')
-            if (self.board[referenceTile + 1].piece.name == 'P') and (self.board[referenceTile + 1].piece.team == capturingTeam):           # If there are pawns on the capturing team to give en passant legality to... do so
-                self.board[referenceTile + 1].piece.legalMoves.append(('enPassant', destination))
-                print(self.board[referenceTile + 1].piece.legalMoves)
+            pawn = self.board[referenceTile + 1].piece
+            if (pawn.name == 'P') and (pawn.piece.team == capturingTeam):           # If there are pawns on the capturing team to give en passant legality to... do so
+                pawn.legalMoves.append((pawn.mailbox, 'enPassant', destination))
         if self.board[referenceTile - 1].piece is not None:
-            if (self.board[referenceTile - 1].piece.name == 'P') and (self.board[referenceTile - 1].piece.team == capturingTeam):
-                self.board[referenceTile - 1].piece.legalMoves.append(('enPassant', destination))
+            pawn = self.board[referenceTile - 1].piece
+            if (pawn.name == 'P') and (pawn.team == capturingTeam):
+                pawn.legalMoves.append((pawn.mailbox, 'enPassant', destination))
     
     def areKingsChecked(self):
         if (len(self.board[self.pieceList['black']['K'][0].mailbox].watchedBy['white']) > 0):
@@ -246,7 +247,7 @@ class Board:
             print('Illegal Move, chosen tile is empty')
             return False
         targetPiece = self.board[destination].piece
-        for (moveType, target) in movingPiece.legalMoves:
+        for (origin, moveType, target) in movingPiece.legalMoves:
             if destination == target:
                 movingPiece.mailbox = destination
 
@@ -328,20 +329,31 @@ class Board:
         FEN = FEN[:7] + FENTip          # Concatenates the slash split and space split arrays
         return FEN
 
+    def removeKingCheckedMoves(self, king, checkingPieces):
+        for checkingPiece in checkingPieces:
+            offsets = checkingPiece.offsets
+            vector = king.mailbox - checkingPiece.mailbox
+            selectedOffset = -float('inf')
+            for offset in offsets:
+                if (vector // offset > 0) and (vector % offset == 0) and (abs(offset) > selectedOffset):
+                    selectedOffset = offset
+            king.legalMoves[selectedOffset] = []
+            king.legalMoves[-selectedOffset] = []
+
     # Calculates blocking moves, killing moves, and escape moves respectively
     # Must be run after all pins have been culled and safe king squares evaluated.
     def cullCheckMoves(self):
         finalMoves = []
         if self.playerTurnToPlay == 'white':
             king = self.pieceList['white']['K'][0]
+            self.removeKingCheckedMoves(king, self.board[king.mailbox].watchedBy['black'])
             if len(self.board[king.mailbox].watchedBy['black']) > 1:
-                return king.legalMoves
+                return king.listAllLegalMoves()
             else:
                 checkingPiece = self.board[king.mailbox].watchedBy['black'][0]
                 for piece in self.board[checkingPiece.mailbox].watchedBy['white']:
                     if piece.name != 'K':
-                        finalMoves.append(('capture',checkingPiece.mailbox))
-                finalMoves += king.legalMoves
+                        finalMoves.append((piece.mailbox, 'capture',checkingPiece.mailbox))
                 if (checkingPiece.name == 'P') or (checkingPiece.name == 'N'):
                     return finalMoves
                 else:
@@ -349,35 +361,36 @@ class Board:
 
         elif self.playerTurnToPlay == 'black':
             king = self.pieceList['black']['K'][0]
+            self.removeKingCheckedMoves(king, self.board[king.mailbox].watchedBy['white'])
             if len(self.board[king.mailbox].watchedBy['white']) > 1:
-                return king.legalMoves
+                return king.listAllLegalMoves()
             else:
                 checkingPiece = self.board[king.mailbox].watchedBy['white'][0]
                 for piece in self.board[checkingPiece.mailbox].watchedBy['black']:
                     if piece.name != 'K':
-                        finalMoves.append(('capture',checkingPiece.mailbox))
-                finalMoves += king.legalMoves
+                        finalMoves.append((piece.mailbox, 'capture',checkingPiece.mailbox))
                 if (checkingPiece.name == 'P') or (checkingPiece.name == 'N'):
                     return finalMoves
                 else:
                     finalMoves += self.findBlockingMoves(king, checkingPiece)
+        finalMoves += king.listAllLegalMoves()
         return finalMoves
                 
     def findBlockingMoves(self, targetKing, checkingPiece):
         offsets = checkingPiece.offsets
         vector = targetKing.mailbox - checkingPiece.mailbox
-        selectedOffset = None
+        selectedOffset = -float('inf')
         blockingMoves = []
         for offset in offsets:
-            if (vector // offset > 1) and (vector % offset == 0):
+            if (vector // offset > 0) and (vector % offset == 0) and (abs(offset) > selectedOffset):
                 selectedOffset = offset
-                break
         targetMailbox = targetKing.mailbox - selectedOffset
         while self.board[targetMailbox].piece is None:
             possiblePieces = self.board[targetMailbox].watchedBy[targetKing.team]
             if len(possiblePieces) > 0:
                 for piece in possiblePieces:
-                    blockingMoves.append(('move', targetMailbox))
+                    if piece.name != 'K':
+                        blockingMoves.append((piece.mailbox, 'block', targetMailbox))
             targetMailbox -= selectedOffset
         return blockingMoves
 
@@ -436,7 +449,7 @@ class Board:
             index += 1
     
     def cullPins(self):
-        pieceNames = ['B','Q','R']
+        pieceNames = ['B','Q','R','P','N']
         teamNames = ['white','black']
         for team in teamNames:
             for pieceName in pieceNames:
@@ -448,18 +461,7 @@ class Board:
                         pinnedPiece = xray[0]
                         inverseOffset = offset * (-1)
                         if (pinTarget.name == 'K') and (pinTarget.team != piece.team) and (pinnedPiece.team != piece.team):      # If king is enemy and being pinned with enemy piece
-                            if (pinnedPiece.name != 'P') and (inverseOffset in pinnedPiece.offsets):                     # If piece is Bishop, Queen, or Rook (Not accounted for pawns yet)
-                                newLegalMoves = []
-                                target = pinnedPiece.mailbox + inverseOffset       
-                                while ((self.board[target].mailbox > 0) and (self.board[target].piece is None)):        # This loop moves tile by tile, assessing the presence of a piece or out of bounds
-                                    newLegalMoves.append(('move', target))                                              # If a piece is found, it attempts to see the pieces behind it, accounting for pins and xray attacks
-                                    target += inverseOffset                                                             # Format for move storage: ('move'/'capture', mailbox of where move would put this piece)
-                                if (self.board[target].piece is not None):
-                                    if (self.board[target].piece.team != pinnedPiece.team):
-                                        newLegalMoves.append(('capture', target))
-                                pinnedPiece.legalMoves = newLegalMoves
-                            else:
-                                pinnedPiece.legalMoves = []
+                            pinnedPiece.legalMoves = {pinnedPiece.legalMoves[inverseOffset]}                                     # Piece can therefore only move along the pinned vector
     
     # High-level function, coordinates board readiness of use for move pondering and other functions into one process.
     # TODO: Allow usage of commands in terminal to improve testing
