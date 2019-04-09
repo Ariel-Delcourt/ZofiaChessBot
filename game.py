@@ -5,7 +5,6 @@ from tile import Tile
 
 class Game:
 
-    def __init__(self):
-        chessBoard = Board()
-        currentTurn = 'white'       #can be white or black
-        turnNumber = 0
+    def __init__(self, FEN=None):
+        self.chessBoard = Board(FEN)
+        self.chessBoard.refreshBoard()

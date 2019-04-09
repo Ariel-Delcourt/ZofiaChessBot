@@ -7,7 +7,7 @@ init()
 
 class Board:
     
-    def __init__(self):
+    def __init__(self, FEN=None):
         self.board = []
         self.kingChecked = {'white': False, 'black': False}
         self.rookMoved = {'black': {'queenside': False, 'kingside': False}, 'white': {'queenside': False, 'kingside': False}}
@@ -15,7 +15,6 @@ class Board:
         self.currentTurn = 0
         self.playerTurnToPlay = 'white'
         self.enPassantSquare = None
-        self.initialized = False 
         self.pieceList = {
             'white': {'P': [], 'N': [], 'B': [], 'R': [], 'Q': [], 'K': []},
             'black': {'P': [], 'N': [], 'B': [], 'R': [], 'Q': [], 'K': []}
@@ -24,6 +23,9 @@ class Board:
             'black': {'P': 0, 'N': 0, 'B': 0, 'R': 0, 'Q': 0},
             'white': {'P': 0, 'N': 0, 'B': 0, 'R': 0, 'Q': 0}
             }
+        self.makeBoard()
+        if FEN != None:
+            self.boardFromFEN(FEN)
         
     def makeBoard(self):
         finalBoard = []
@@ -160,6 +162,11 @@ class Board:
             for piece in pieceName[1]:
                 piece.generateMoves(self.board)
 
+    def clearTileWatch(self):
+        for tile in self.board:
+            tile.watchedBy = {'white': [], 'black': []}
+
+
     def markBoardTiles(self):
         legalMovesList = self.pieceList
         for pieceName in legalMovesList['white'].items():
@@ -268,6 +275,7 @@ class Board:
                     self.deadPieces[targetPiece.team][targetPiece.name] += 1
                     self.board[destination].piece = movingPiece
                     self.board[mailbox].piece = None
+                    self.pieceList[targetPiece.team][targetPiece.name]
                 
                 elif moveType == 'castle':
                     if movingPiece.team == 'white':
@@ -462,21 +470,23 @@ class Board:
                         inverseOffset = offset * (-1)
                         if (pinTarget.name == 'K') and (pinTarget.team != piece.team) and (pinnedPiece.team != piece.team):      # If king is enemy and being pinned with enemy piece
                             pinnedPiece.legalMoves = {pinnedPiece.legalMoves[inverseOffset]}                                     # Piece can therefore only move along the pinned vector
-    
-    # High-level function, coordinates board readiness of use for move pondering and other functions into one process.
-    # TODO: Allow usage of commands in terminal to improve testing
-    def initialize(self):
+
+    def listAllTeamMoves(self, team):
+        teamMoves = []
+        for pieceType in self.pieceList[team].items():
+            for piece in pieceType[1]:
+                teamMoves += piece.listAllLegalMoves()
+        return teamMoves
+
+    def refreshBoard(self):
         self.generatePieceList()
-        if self.sanityCheck():
-            self.generateAllMoves()
-            self.markBoardTiles()
-            self.clearUnsafeKingSquares()
-            self.generateEnPassantMoves()
-            self.cullPins()
-            self.areKingsChecked()
-            self.generateCastleMoves()
-            print("cullcheckmoves: ", self.cullCheckMoves())
-            self.initialized = True
-            print("Board initialized successfully.")
-        else:
-            print("Board failed to initialize.")
+        self.generateAllMoves()
+        self.clearTileWatch()
+        self.markBoardTiles()
+        self.clearUnsafeKingSquares()
+        self.generateEnPassantMoves()
+        self.cullPins()
+        self.areKingsChecked()
+        self.generateCastleMoves()
+        self.cullCheckMoves()
+        self.nextMoves = self.listAllTeamMoves(self.playerTurnToPlay)
