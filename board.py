@@ -43,9 +43,7 @@ class Board:
             -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
             -1, -1, -1, -1, -1, -1, -1, -1, -1, -1
             ]
-        for i in board:
-            finalBoard.append(Tile('x', i, None))
-        self.board = finalBoard
+        self.board = [Tile('x', i, None) for i in board]
 
     def clearBoard(self):
         for tile in self.board:
@@ -162,7 +160,7 @@ class Board:
             for piece in pieceName[1]:
                 piece.generateMoves(self.board)
 
-    def clearTileWatch(self):
+    def clearTileWatchedBy(self):
         for tile in self.board:
             tile.watchedBy = {'white': [], 'black': []}
 
@@ -481,7 +479,7 @@ class Board:
     def refreshBoard(self):
         self.generatePieceList()
         self.generateAllMoves()
-        self.clearTileWatch()
+        self.clearTileWatchedBy()
         self.markBoardTiles()
         self.clearUnsafeKingSquares()
         self.generateEnPassantMoves()
