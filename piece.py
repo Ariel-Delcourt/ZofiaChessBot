@@ -53,6 +53,8 @@ class Pawn(Piece):
                     if (board[self.mailbox + offset].piece.team == 'black'):
                         if (board[self.mailbox + offset].mailbox > 0): # Checks out of bounds
                             self.legalMoves[offset].append((self.mailbox,'capture', self.mailbox + offset))
+                    else:
+                        board[self.mailbox + offset].watchedBy[self.team].append(self)
 
         else:                                                   # For team black, pawn moves down
             #---- QUIET MOVES ----#
@@ -69,6 +71,8 @@ class Pawn(Piece):
                     if (board[self.mailbox + offset].piece.team == 'white'):
                         if (board[self.mailbox + offset].mailbox > 0):         # Checks out of bounds
                             self.legalMoves[offset].append((self.mailbox,'capture', self.mailbox + offset))
+                    else:
+                        board[self.mailbox + offset].watchedBy[self.team].append(self)
     
 class Knight(Piece):
 
@@ -86,6 +90,8 @@ class Knight(Piece):
                     self.legalMoves[offset].append((self.mailbox,'move', self.mailbox + offset))
                 elif (board[self.mailbox + offset].piece.team != self.team):
                     self.legalMoves[offset].append((self.mailbox,'capture', self.mailbox + offset))
+                else:
+                    board[self.mailbox + offset].watchedBy[self.team].append(self)
         
 class King(Piece):
 
@@ -113,6 +119,8 @@ class King(Piece):
                     self.legalMoves[offset].append((self.mailbox,'move', self.mailbox + offset))
                 elif (board[self.mailbox + offset].piece.team != self.team):
                     self.legalMoves[offset].append((self.mailbox,'capture', self.mailbox + offset))
+                else:
+                    board[self.mailbox + offset].watchedBy[self.team].append(self)
 
 class Bishop(Piece):
 
@@ -135,6 +143,8 @@ class Bishop(Piece):
             if (board[target].piece is not None):
                 if (board[target].piece.team != self.team):
                     self.legalMoves[offset].append((self.mailbox,'capture', target))
+                else:
+                    board[target].watchedBy[self.team].append(self)
                 self.xraySearch(offset,target,board)
 
 class Rook(Piece):
@@ -158,6 +168,8 @@ class Rook(Piece):
             if (board[target].piece is not None):
                 if (board[target].piece.team != self.team):
                     self.legalMoves[offset].append((self.mailbox,'capture', target))
+                else:
+                    board[target].watchedBy[self.team].append(self)
                 self.xraySearch(offset,target,board)
         self.legalMoves = self.legalMoves
             
@@ -183,4 +195,6 @@ class Queen(Piece):
             if (board[target].piece is not None):
                 if (board[target].piece.team != self.team):
                     self.legalMoves[offset].append((self.mailbox,'capture', target))
+                else:
+                    board[target].watchedBy[self.team].append(self)
                 self.xraySearch(offset,target,board)

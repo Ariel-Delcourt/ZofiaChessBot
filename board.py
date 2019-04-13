@@ -12,7 +12,7 @@ class Board:
         self.kingChecked = {'white': False, 'black': False}
         self.rookMoved = {'black': {'queenside': False, 'kingside': False}, 'white': {'queenside': False, 'kingside': False}}
         self.kingMoved = {'black': False, 'white': False}
-        self.currentTurn = 0
+        self.currentTurn = 1
         self.playerTurnToPlay = 'white'
         self.enPassantSquare = None
         self.pieceList = {
@@ -26,6 +26,8 @@ class Board:
         self.makeBoard()
         if FEN != None:
             self.boardFromFEN(FEN)
+        else:
+            self.startingPosition()
         
     def makeBoard(self):
         finalBoard = []
@@ -50,7 +52,7 @@ class Board:
             tile.piece = None
         print("Board cleared successfully.")
 
-    def populate(self):
+    def startingPosition(self):
         for i in range(31,39):
             self.board[i].piece = Pawn('white', self.board[i].mailbox)
         for i in range(81,89):
@@ -91,13 +93,19 @@ class Board:
 
         for rank in displayArray:
             for tile in rank:
-                if (tile.piece is None):
-                    print(Fore.WHITE + '-', end=" ", flush=True)
+                if tile.mailbox < 0:
+                    print(Fore.BLACK + '-', end=" ", flush=True)
+                elif (tile.piece is None):
+                    if (len(tile.watchedBy[self.playerTurnToPlay]) > 0):
+                        print(Fore.RED + '-', end=" ", flush=True)
+                    else:
+                        print(Fore.WHITE + '-', end=" ", flush=True)
                 elif (tile.piece.team == 'white'):
                     print(Fore.WHITE + tile.piece.name, end=" ", flush=True)
                 else:
                     print(Fore.LIGHTYELLOW_EX + tile.piece.name, end=" ", flush=True)
             print()
+        print(Fore.WHITE)
 
     def addPiece(self, piece, team, mailbox):
         piece = str.capitalize(piece)
@@ -193,23 +201,23 @@ class Board:
             king = self.pieceList['white']['K'][0]
             if (not (self.rookMoved['white']['queenside']) and (len(self.board[24].watchedBy['black']) == 0) and (len(self.board[23].watchedBy['black']) == 0)):
                 if (self.board[24].piece is None) and (self.board[23].piece is None) and (self.board[22].piece is None):
-                    king.legalMoves.append((king.mailbox, 'castle', 23))
+                    king.legalMoves[-1].append((king.mailbox, 'castle', 23))
             if (not (self.rookMoved['white']['kingside']) and (len(self.board[26].watchedBy['black']) == 0) and (len(self.board[27].watchedBy['black']) == 0)):
                 if (self.board[26].piece is None) and (self.board[27].piece is None):
-                    self.pieceList['white']['K'][0].legalMoves.append((king.mailbox, 'castle', 27))
+                    king.legalMoves[1].append((king.mailbox, 'castle', 27))
 
         if (not (self.kingChecked['black']) and not (self.kingMoved['black'])):
             king = self.pieceList['black']['K'][0]
             if (not (self.rookMoved['black']['queenside']) and (len(self.board[94].watchedBy['white']) == 0) and (len(self.board[93].watchedBy['white']) == 0)):
                 if (self.board[94].piece is None) and (self.board[93].piece is None) and (self.board[92].piece is None):
-                    king.legalMoves.append((king.mailbox, 'castle', 93))
+                    king.legalMoves[-1].append((king.mailbox, 'castle', 93))
             if (not (self.rookMoved['black']['kingside']) and (len(self.board[96].watchedBy['white']) == 0) and (len(self.board[97].watchedBy['white']) == 0)):
                 if (self.board[96].piece is None) and (self.board[97].piece is None):
-                    king.legalMoves.append((king.mailbox, 'castle', 97))
+                    king.legalMoves[1].append((king.mailbox, 'castle', 97))
     
     def generateEnPassantMoves(self):
         destination = self.enPassantSquare
-        if destination == '-':
+        if destination is None:
             return
         capturingTeam = None
         referenceTile = None
@@ -249,10 +257,13 @@ class Board:
         destination = Tile.coordinateToMailbox(destination)
         movingPiece = self.board[mailbox].piece
         if movingPiece is None:
-            print('Illegal Move, chosen tile is empty')
+            print('Illegal Move, chosen tile is empty.')
+            return False
+        if movingPiece.team != self.playerTurnToPlay:
+            print('Illegal Move, piece is not yours to move.')
             return False
         targetPiece = self.board[destination].piece
-        for (origin, moveType, target) in movingPiece.legalMoves:
+        for (origin, moveType, target) in movingPiece.listAllLegalMoves():
             if destination == target:
                 movingPiece.mailbox = destination
 
@@ -324,7 +335,7 @@ class Board:
                         self.deadPieces[targetPiece.team][targetPiece.name] += 1
 
                 return True                                                                 # True for success, false for failure
-        print('Illegal Move')
+        print('Illegal Move.')
         return False
 
     # Splits up FEN into sections for use in boardFromFen()
@@ -344,7 +355,6 @@ class Board:
                 if (vector // offset > 0) and (vector % offset == 0) and (abs(offset) > selectedOffset):
                     selectedOffset = offset
             king.legalMoves[selectedOffset] = []
-            king.legalMoves[-selectedOffset] = []
 
     # Calculates blocking moves, killing moves, and escape moves respectively
     # Must be run after all pins have been culled and safe king squares evaluated.
@@ -445,7 +455,7 @@ class Board:
                         self.rookMoved['black']['kingside'] = False
             elif index == 10:
                 if FEN[10] == '-':
-                     self.enPassantSquare = '-'
+                     self.enPassantSquare = None
                 else:
                     self.enPassantSquare = Tile.coordinateToMailbox(FEN[10])
             elif index == 11:
@@ -477,14 +487,24 @@ class Board:
         return teamMoves
 
     def refreshBoard(self):
+        self.clearTileWatchedBy()
         self.generatePieceList()
         self.generateAllMoves()
-        self.clearTileWatchedBy()
         self.markBoardTiles()
         self.clearUnsafeKingSquares()
         self.generateEnPassantMoves()
         self.cullPins()
         self.areKingsChecked()
         self.generateCastleMoves()
-        self.cullCheckMoves()
-        self.nextMoves = self.listAllTeamMoves(self.playerTurnToPlay)
+        if self.kingChecked[self.playerTurnToPlay]:
+            self.nextMoves = self.cullCheckMoves()
+        else:
+            self.nextMoves = self.listAllTeamMoves(self.playerTurnToPlay)
+
+    def nextTurn(self):
+        if self.playerTurnToPlay == 'black':
+            self.playerTurnToPlay = 'white'
+        else:
+            self.playerTurnToPlay = 'black'
+        self.currentTurn += 1
+        self.refreshBoard()
